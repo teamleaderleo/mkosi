@@ -2,14 +2,13 @@ From: Linux Fieldwork <noreply@example.invalid>
 Subject: [PATCH] depmod: execute from ToolsTree against the target root
 
 `run_depmod()` currently uses `chroot_cmd(root=context.rootoptions)`. That
-makes the executable come from the target image and, on the affected path,
-leaves lookup sensitive to the invoking host's PATH. In particular, a
-ToolsTree with `/usr/sbin/depmod` still fails when the host PATH omits
-`/usr/sbin`.
+executes depmod from the target image rather than the configured ToolsTree.
+On hosts whose PATH omits `/usr/sbin`, the affected build can fail to find
+`depmod` even though the ToolsTree provides `/usr/sbin/depmod`.
 
-Run depmod through `Context.sandbox()` so executable lookup uses the
-configured ToolsTree. Bind the image at `/buildroot` and use depmod's
-`--basedir` option for all module input and generated metadata.
+Run depmod through `Context.sandbox()` so executable lookup and libraries
+come from the configured ToolsTree. Bind the image at `/buildroot` and use
+depmod's `--basedir` option for module input and generated metadata.
 
 This keeps operation ownership explicit:
 
@@ -18,18 +17,16 @@ This keeps operation ownership explicit:
 
 Closes the failure mode described by systemd/mkosi#4319.
 ---
- mkosi/__init__.py | 8 ++++++--
- 1 file changed, 6 insertions(+), 2 deletions(-)
+ mkosi/__init__.py | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/mkosi/__init__.py b/mkosi/__init__.py
 index 9e35c53..0000000 100644
 --- a/mkosi/__init__.py
 +++ b/mkosi/__init__.py
-@@ -1,3 +1,3 @@
-@@
--        with complete_step(f"Running depmod for {modulesd.name}"):
+@@ -3087,2 +3087,5 @@ def run_depmod(context: Context, *, cache: bool = False) -> None:
+         with complete_step(f"Running depmod for {modulesd.name}"):
 -            run(["depmod", "--all", modulesd.name], sandbox=chroot_cmd(root=context.rootoptions))
-+        with complete_step(f"Running depmod for {modulesd.name}"):
 +            run(
 +                ["depmod", "--basedir", "/buildroot", "--all", modulesd.name],
 +                sandbox=context.sandbox(options=context.rootoptions()),
