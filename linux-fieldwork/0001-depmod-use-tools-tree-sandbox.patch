@@ -21,7 +21,7 @@ Closes the failure mode described by systemd/mkosi#4319.
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/mkosi/__init__.py b/mkosi/__init__.py
-index 9e35c53..0000000 100644
+index 9e35c53..f3f0e12 100644
 --- a/mkosi/__init__.py
 +++ b/mkosi/__init__.py
 @@ -3087,2 +3087,5 @@ def run_depmod(context: Context, *, cache: bool = False) -> None:
