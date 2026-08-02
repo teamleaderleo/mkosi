@@ -5,7 +5,7 @@ import subprocess
 from collections.abc import Sequence
 from contextlib import AbstractContextManager
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Optional, cast
 
 import pytest
 
@@ -35,7 +35,7 @@ class FakeContext:
         *,
         network: bool = False,
         devices: bool = False,
-        scripts: Path | None = None,
+        scripts: Optional[Path] = None,
         options: Sequence[PathString] = (),
     ) -> AbstractContextManager[list[PathString]]:
         self.sandbox_options += [list(options)]
@@ -54,8 +54,8 @@ def test_run_depmod_uses_tools_tree_sandbox(tmp_path: Path, monkeypatch: pytest.
         cmdline: Sequence[PathString],
         **kwargs: Any,
     ) -> subprocess.CompletedProcess[str]:
-        calls += [(list(cmdline), kwargs["sandbox"])]
-        return subprocess.CompletedProcess(cmdline, 0)
+        calls.append((list(cmdline), kwargs["sandbox"]))
+        return subprocess.CompletedProcess(list(cmdline), 0)
 
     monkeypatch.setattr(mkosi, "run", fake_run)
 
