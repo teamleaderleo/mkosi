@@ -1,6 +1,70 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-from mkosi import kmod
+import contextlib
+import subprocess
+from collections.abc import Sequence
+from contextlib import AbstractContextManager
+from pathlib import Path
+from typing import Any, cast
+
+import pytest
+
+import mkosi
+from mkosi import kmod, run_depmod
+from mkosi.context import Context
+from mkosi.util import PathString
+
+
+class FakeConfig:
+    overlay = False
+    image = "main"
+
+
+class FakeContext:
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.config = FakeConfig()
+        self.sandbox_options: list[list[PathString]] = []
+        self.sandbox_value = contextlib.nullcontext(["tools-tree"])
+
+    def rootoptions(self, dst: PathString = "/buildroot", *, readonly: bool = False) -> list[str]:
+        return ["--ro-bind" if readonly else "--bind", str(self.root), str(dst)]
+
+    def sandbox(
+        self,
+        *,
+        network: bool = False,
+        devices: bool = False,
+        scripts: Path | None = None,
+        options: Sequence[PathString] = (),
+    ) -> AbstractContextManager[list[PathString]]:
+        self.sandbox_options += [list(options)]
+        return self.sandbox_value
+
+
+def test_run_depmod_uses_tools_tree_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    modulesd = tmp_path / "usr/lib/modules/1.2.3"
+    modulesd.mkdir(parents=True)
+    (modulesd / "example.ko").touch()
+
+    context = FakeContext(tmp_path)
+    calls: list[tuple[list[PathString], Any]] = []
+
+    def fake_run(
+        cmdline: Sequence[PathString],
+        **kwargs: Any,
+    ) -> subprocess.CompletedProcess[str]:
+        calls += [(list(cmdline), kwargs["sandbox"])]
+        return subprocess.CompletedProcess(cmdline, 0)
+
+    monkeypatch.setattr(mkosi, "run", fake_run)
+
+    run_depmod(cast(Context, context))
+
+    assert context.sandbox_options == [["--bind", str(tmp_path), "/buildroot"]]
+    assert calls == [
+        (["depmod", "--basedir", "/buildroot", "--all", "1.2.3"], context.sandbox_value)
+    ]
 
 
 def test_globs_match_module() -> None:
