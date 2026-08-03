@@ -59,7 +59,9 @@ def test_run_depmod_uses_tools_tree_sandbox(tmp_path: Path, monkeypatch: pytest.
 
     monkeypatch.setattr(mkosi, "run", fake_run)
 
-    run_depmod(cast(Context, context))
+    # Cache mode skips unrelated module-filter preprocessing while still
+    # executing depmod for every valid kernel module directory.
+    run_depmod(cast(Context, context), cache=True)
 
     assert context.sandbox_options == [["--bind", str(tmp_path), "/buildroot"]]
     assert calls == [
