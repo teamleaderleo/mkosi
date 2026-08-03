@@ -1,0 +1,32 @@
+name: Linux Fieldwork depmod boundary
+
+on:
+  push:
+    branches:
+      - linux-fieldwork/tools-tree-depmod-path
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install focused test tools
+        run: python -m pip install --disable-pip-version-check pytest ruff mypy
+      - name: Apply retained source patch
+        run: patch --fuzz=0 --no-backup-if-mismatch -p1 < linux-fieldwork/0001-depmod-use-tools-tree-sandbox.patch
+      - name: Compile patched source
+        run: python -m py_compile mkosi/__init__.py tests/test_kmod.py
+      - name: Run focused regression
+        run: python -m pytest -q tests/test_kmod.py
+      - name: Ruff
+        run: python -m ruff check mkosi/__init__.py tests/test_kmod.py
+      - name: Mypy
+        run: python -m mypy mkosi/__init__.py tests/test_kmod.py
