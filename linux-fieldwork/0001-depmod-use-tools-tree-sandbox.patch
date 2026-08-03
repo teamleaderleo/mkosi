@@ -24,12 +24,19 @@ diff --git a/mkosi/__init__.py b/mkosi/__init__.py
 index 9e35c53..f3f0e12 100644
 --- a/mkosi/__init__.py
 +++ b/mkosi/__init__.py
-@@ -3087,2 +3087,5 @@ def run_depmod(context: Context, *, cache: bool = False) -> None:
+@@ -3085,9 +3085,12 @@ def run_depmod(context: Context, *, cache: bool = False) -> None:
+             mtime = (modulesd / "modules.dep").stat().st_mtime
+             if all(m.stat().st_mtime <= mtime for m in modulesd.rglob("*.ko*")):
+                 continue
+ 
          with complete_step(f"Running depmod for {modulesd.name}"):
 -            run(["depmod", "--all", modulesd.name], sandbox=chroot_cmd(root=context.rootoptions))
 +            run(
 +                ["depmod", "--basedir", "/buildroot", "--all", modulesd.name],
 +                sandbox=context.sandbox(options=context.rootoptions()),
 +            )
+ 
+ 
+ def run_sysusers(context: Context) -> None:
 -- 
 2.47.0
