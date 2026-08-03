@@ -23,8 +23,10 @@ jobs:
           python-version: '3.12'
       - name: Install focused test tools
         run: python -m pip install --disable-pip-version-check pytest ruff mypy
-      - name: Apply retained source patch
-        run: patch --fuzz=0 --no-backup-if-mismatch -p1 < linux-fieldwork/0001-depmod-use-tools-tree-sandbox.patch
+      - name: Check and apply retained source patch
+        run: |
+          git apply --check --recount linux-fieldwork/0001-depmod-use-tools-tree-sandbox.patch
+          git apply --recount linux-fieldwork/0001-depmod-use-tools-tree-sandbox.patch
       - name: Compile patched source
         run: python -m py_compile mkosi/__init__.py tests/test_kmod.py
       - name: Run focused regression
